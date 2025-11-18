@@ -1,47 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>LBA Front</title>
+  <title>LBA 予約ページ</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       font-family: system-ui;
+      background: #f5f7fb;
+      margin: 0;
       padding: 20px;
-      background: #fafafa;
-      max-width: 480px;
-      margin: 0 auto;
     }
+
     #message {
-      margin-bottom: 20px;
       font-size: 16px;
+      margin-bottom: 20px;
       color: #444;
     }
-    .lesson-card {
-      background: white;
-      padding: 14px;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      margin-bottom: 16px;
-    }
-    .lesson-title {
-      font-size: 18px;
-      font-weight: bold;
-      margin: 0 0 6px;
-    }
-    .lesson-info {
-      font-size: 14px;
-      color: #555;
-      margin-bottom: 10px;
-    }
-    .btn {
+
+    iframe {
       width: 100%;
-      padding: 12px;
-      font-size: 15px;
+      height: 90vh;
       border: none;
-      background: #1e88e5;
-      color: white;
-      border-radius: 8px;
-      cursor: pointer;
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     }
   </style>
 </head>
@@ -49,26 +33,22 @@
 <body>
 
   <div id="message">Loading...</div>
-  <div id="lessonList"></div>
+  <div id="frameArea"></div>
 
   <script>
     const CENTRAL_URL = "https://script.google.com/macros/s/AKfycbxYj547FMAl5qcWTU-DKJlrv2g6Q1MNBtgccmH7A9xli6ifZ2k4mUZO7ZXSGhHYF3a04A/exec";
-    const SECRET = "h38f9as0f9as09fjasf90asfj";  // ← ここは中央APIに登録したSECRETと同じ
-  
-    // URL パラメータから tenantId を取得
+    const SECRET = "h38f9as0f9as09fjasf90asfj"; // 中央APIの SECRET と同じ
+
     const params = new URLSearchParams(location.search);
     const tenantId = params.get("tenantId");
-  
+
     if (!tenantId) {
       document.getElementById("message").innerText =
         "エラー：tenantId が指定されていません。";
     } else {
       loadFromCentral(tenantId);
     }
-  
-    // -----------------------------------------------------
-    // HMAC-SHA256 署名を生成（ブラウザ内ネイティブ実装）
-    // -----------------------------------------------------
+
     async function createSignature(message) {
       const enc = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -78,53 +58,48 @@
         false,
         ["sign"]
       );
-  
+
       const sigBuffer = await crypto.subtle.sign(
         "HMAC",
         key,
         enc.encode(message)
       );
-  
+
       const bytes = new Uint8Array(sigBuffer);
       return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
     }
-  
-    // -----------------------------------------------------
-    // 中央API（LBA_CENTRAL）から webappUrl を取得
-    // -----------------------------------------------------
+
     async function loadFromCentral(id) {
       document.getElementById("message").innerText = "通信中…";
-  
-      const sig = await createSignature(id);  // 署名生成
-  
+
+      const sig = await createSignature(id);
       const url = `${CENTRAL_URL}?tenantId=${id}&sig=${sig}`;
-  
+
       const res = await fetch(url);
       const data = await res.json();
-  
+
       console.log("CENTRAL API RESULT:", data);
-  
+
       if (!data.ok) {
         document.getElementById("message").innerText =
           `利用できません（${data.reason}）`;
         return;
       }
-  
+
       if (data.status !== "ACTIVE") {
         document.getElementById("message").innerText =
           "現在、この講師の予約ページは利用停止中です。";
         return;
       }
-  
+
       if (!data.webappUrl) {
         document.getElementById("message").innerText =
           "設定が完了していません（WebApp URL が未登録）";
         return;
       }
-  
+
       document.getElementById("message").innerText = "";
-  
-      // 内側WebApp（講師ENV）を iframe に表示
+
       document.getElementById("frameArea").innerHTML =
         `<iframe src="${data.webappUrl}"></iframe>`;
     }
