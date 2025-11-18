@@ -34,7 +34,7 @@
     }
 
     async function loadFromCentral(id) {
-      const centralUrl = "中央APIのURLをここに貼る"; // ← 後で入れる
+      const centralUrl = "https://script.google.com/macros/s/AKfycbxYj547FMAl5qcWTU-DKJlrv2g6Q1MNBtgccmH7A9xli6ifZ2k4mUZO7ZXSGhHYF3a04A/exec"; // ← LBA_CENTRAL_APIのWebAppURL
 
       const res = await fetch(`${centralUrl}?tenantId=${id}`);
       const data = await res.json();
