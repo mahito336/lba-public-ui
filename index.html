@@ -4,15 +4,44 @@
   <meta charset="utf-8">
   <title>LBA Front</title>
   <style>
-    body { font-family: system-ui; padding: 20px; background: #fafafa; }
-    #message { margin-bottom: 20px; font-size: 16px; color: #444; }
-    iframe {
-      width: 100%;
-      height: 90vh;
-      border: none;
-      border-radius: 12px;
+    body {
+      font-family: system-ui;
+      padding: 20px;
+      background: #fafafa;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    #message {
+      margin-bottom: 20px;
+      font-size: 16px;
+      color: #444;
+    }
+    .lesson-card {
       background: white;
-      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+      padding: 14px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 16px;
+    }
+    .lesson-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 0 0 6px;
+    }
+    .lesson-info {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 10px;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      font-size: 15px;
+      border: none;
+      background: #1e88e5;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -20,12 +49,13 @@
 <body>
 
   <div id="message">Loading...</div>
-  <div id="frameArea"></div>
+  <div id="lessonList"></div>
 
   <script>
     const params = new URLSearchParams(location.search);
     const tenantId = params.get("tenantId");
 
+    // tenantId のチェック
     if (!tenantId) {
       document.getElementById("message").innerText =
         "エラー：tenantId が指定されていません。";
@@ -33,8 +63,9 @@
       loadFromCentral(tenantId);
     }
 
+    // 中央APIへ問い合わせ
     async function loadFromCentral(id) {
-      const centralUrl = "https://script.google.com/macros/s/AKfycbxYj547FMAl5qcWTU-DKJlrv2g6Q1MNBtgccmH7A9xli6ifZ2k4mUZO7ZXSGhHYF3a04A/exec"; // ← LBA_CENTRAL_APIのWebAppURL
+      const centralUrl = "https://script.google.com/macros/s/AKfycbxYj547FMAl5qcWTU-DKJlrv2g6Q1MNBtgccmH7A9xli6ifZ2k4mUZO7ZXSGhHYF3a04A/exec";
 
       const res = await fetch(`${centralUrl}?tenantId=${id}`);
       const data = await res.json();
@@ -59,8 +90,28 @@
 
       document.getElementById("message").innerText = "";
 
-      document.getElementById("frameArea").innerHTML =
-        `<iframe src="${data.webappUrl}"></iframe>`;
+      // 今はレッスン一覧を中央APIから取得していないので
+      // とりあえず「予約ページへ」のボタンだけ表示する
+      renderBasicEntry(data.webappUrl, id);
+    }
+
+    // 仮のボタン表示（後でレッスン一覧に更新）
+    function renderBasicEntry(webappUrl, tenantId) {
+      const html = `
+        <div class="lesson-card">
+          <div class="lesson-title">予約ページに進む</div>
+          <button class="btn" onclick="goToEnv('${webappUrl}', '${tenantId}')">
+            予約ページを開く
+          </button>
+        </div>
+      `;
+      document.getElementById("lessonList").innerHTML = html;
+    }
+
+    // WebApp に遷移（現時点はプレーン遷移）
+    function goToEnv(baseUrl, tenantId) {
+      const url = `${baseUrl}?tenantId=${tenantId}`;
+      window.location.href = url;
     }
   </script>
 </body>
