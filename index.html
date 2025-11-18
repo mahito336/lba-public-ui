@@ -52,67 +52,83 @@
   <div id="lessonList"></div>
 
   <script>
+    const CENTRAL_URL = "https://script.google.com/macros/s/AKfycbxYj547FMAl5qcWTU-DKJlrv2g6Q1MNBtgccmH7A9xli6ifZ2k4mUZO7ZXSGhHYF3a04A/exec";
+    const SECRET = "h38f9as0f9as09fjasf90asfj";  // ← ここは中央APIに登録したSECRETと同じ
+  
+    // URL パラメータから tenantId を取得
     const params = new URLSearchParams(location.search);
     const tenantId = params.get("tenantId");
-
-    // tenantId のチェック
+  
     if (!tenantId) {
       document.getElementById("message").innerText =
         "エラー：tenantId が指定されていません。";
     } else {
       loadFromCentral(tenantId);
     }
-
-    // 中央APIへ問い合わせ
+  
+    // -----------------------------------------------------
+    // HMAC-SHA256 署名を生成（ブラウザ内ネイティブ実装）
+    // -----------------------------------------------------
+    async function createSignature(message) {
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(SECRET),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+      );
+  
+      const sigBuffer = await crypto.subtle.sign(
+        "HMAC",
+        key,
+        enc.encode(message)
+      );
+  
+      const bytes = new Uint8Array(sigBuffer);
+      return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    }
+  
+    // -----------------------------------------------------
+    // 中央API（LBA_CENTRAL）から webappUrl を取得
+    // -----------------------------------------------------
     async function loadFromCentral(id) {
-      const centralUrl = "https://script.google.com/macros/s/AKfycbxYj547FMAl5qcWTU-DKJlrv2g6Q1MNBtgccmH7A9xli6ifZ2k4mUZO7ZXSGhHYF3a04A/exec";
-
-      const res = await fetch(`${centralUrl}?tenantId=${id}`);
+      document.getElementById("message").innerText = "通信中…";
+  
+      const sig = await createSignature(id);  // 署名生成
+  
+      const url = `${CENTRAL_URL}?tenantId=${id}&sig=${sig}`;
+  
+      const res = await fetch(url);
       const data = await res.json();
-
+  
+      console.log("CENTRAL API RESULT:", data);
+  
       if (!data.ok) {
         document.getElementById("message").innerText =
-          "利用できません（契約情報エラー）";
+          `利用できません（${data.reason}）`;
         return;
       }
-
+  
       if (data.status !== "ACTIVE") {
         document.getElementById("message").innerText =
           "現在、この講師の予約ページは利用停止中です。";
         return;
       }
-
+  
       if (!data.webappUrl) {
         document.getElementById("message").innerText =
           "設定が完了していません（WebApp URL が未登録）";
         return;
       }
-
+  
       document.getElementById("message").innerText = "";
-
-      // 今はレッスン一覧を中央APIから取得していないので
-      // とりあえず「予約ページへ」のボタンだけ表示する
-      renderBasicEntry(data.webappUrl, id);
-    }
-
-    // 仮のボタン表示（後でレッスン一覧に更新）
-    function renderBasicEntry(webappUrl, tenantId) {
-      const html = `
-        <div class="lesson-card">
-          <div class="lesson-title">予約ページに進む</div>
-          <button class="btn" onclick="goToEnv('${webappUrl}', '${tenantId}')">
-            予約ページを開く
-          </button>
-        </div>
-      `;
-      document.getElementById("lessonList").innerHTML = html;
-    }
-
-    // WebApp に遷移（現時点はプレーン遷移）
-    function goToEnv(baseUrl, tenantId) {
-      const url = `${baseUrl}?tenantId=${tenantId}`;
-      window.location.href = url;
+  
+      // 内側WebApp（講師ENV）を iframe に表示
+      document.getElementById("frameArea").innerHTML =
+        `<iframe src="${data.webappUrl}"></iframe>`;
     }
   </script>
+
 </body>
 </html>
