@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>LBA Front</title>
+  <style>
+    body { font-family: system-ui; padding: 20px; background: #fafafa; }
+    #message { margin-bottom: 20px; font-size: 16px; color: #444; }
+    iframe {
+      width: 100%;
+      height: 90vh;
+      border: none;
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="message">Loading...</div>
+  <div id="frameArea"></div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const tenantId = params.get("tenantId");
+
+    if (!tenantId) {
+      document.getElementById("message").innerText =
+        "エラー：tenantId が指定されていません。";
+    } else {
+      loadFromCentral(tenantId);
+    }
+
+    async function loadFromCentral(id) {
+      const centralUrl = "中央APIのURLをここに貼る"; // ← 後で入れる
+
+      const res = await fetch(`${centralUrl}?tenantId=${id}`);
+      const data = await res.json();
+
+      if (!data.ok) {
+        document.getElementById("message").innerText =
+          "利用できません（契約情報エラー）";
+        return;
+      }
+
+      if (data.status !== "ACTIVE") {
+        document.getElementById("message").innerText =
+          "現在、この講師の予約ページは利用停止中です。";
+        return;
+      }
+
+      if (!data.webappUrl) {
+        document.getElementById("message").innerText =
+          "設定が完了していません（WebApp URL が未登録）";
+        return;
+      }
+
+      document.getElementById("message").innerText = "";
+
+      document.getElementById("frameArea").innerHTML =
+        `<iframe src="${data.webappUrl}"></iframe>`;
+    }
+  </script>
+</body>
+</html>
