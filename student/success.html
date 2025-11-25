@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>予約確定 - LBA</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      background: #fafafa;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h1 {
+      font-size: 24px;
+      color: #28a745;
+      margin-top: 0;
+    }
+    .section {
+      margin: 20px 0;
+      text-align: left;
+    }
+    .label {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 14px 24px;
+      background: #007aff;
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 16px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>ご予約が確定しました！</h1>
+
+    <div id="lessonInfo" class="section">
+      <div>レッスンの確認情報を読み込み中です…</div>
+    </div>
+
+    <div class="section" style="font-size:14px; line-height:1.6;">
+      ・キャンセルする場合は、メール内のリンクから行えます。<br/>
+      ・レッスン当日は5分前までにお越しください。
+    </div>
+
+    <a href="#" class="btn">ホームへ</a>
+
+  </div>
+
+  <script>
+    const apiEndpoint = "【GAS_WEBAPP_URL】";
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token");
+
+    // successページでもレッスン情報を表示したい場合のみロード
+    async function loadInfo() {
+      if (!token) {
+        document.getElementById("lessonInfo").innerHTML =
+          "<div>※ レッスン情報の取得ができませんでした。</div>";
+        return;
+      }
+
+      const res = await fetch(apiEndpoint + "?action=loadReservationInfo&token=" + token);
+      const json = await res.json();
+
+      if (!json.ok) {
+        document.getElementById("lessonInfo").innerHTML =
+          "<div>※ レッスン情報の取得に失敗しました。</div>";
+        return;
+      }
+
+      document.getElementById("lessonInfo").innerHTML = `
+        <div class="label">レッスン情報</div>
+        <div>${json.lessonName}</div>
+        <div>${json.date} ${json.startTime} - ${json.endTime}</div>
+        <div>場所：${json.location}</div>
+      `;
+    }
+
+    loadInfo();
+  </script>
+</body>
+</html>
