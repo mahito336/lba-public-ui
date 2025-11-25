@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>本予約の確定 - LBA</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      background: #fafafa;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 24px;
+      text-align: center;
+    }
+    .section {
+      margin: 20px 0;
+    }
+    .label {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: #007aff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    .btn:disabled {
+      background: #8bb7ff;
+    }
+    .error {
+      color: #d00;
+      font-weight: bold;
+      margin-top: 16px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>本予約の確定</h1>
+
+    <div id="lessonInfo" class="section"></div>
+
+    <div class="section">
+      <div class="label">メールアドレス</div>
+      <div id="email" style="padding: 8px 0; color:#555;"></div>
+    </div>
+
+    <div class="section">
+      <div class="label">お名前（編集可）</div>
+      <input id="name" type="text" placeholder="山田花子" />
+    </div>
+
+    <div class="section" style="font-size:14px; color:#777; line-height:1.5;">
+      ・予約を確定後、キャンセルはメール内リンクから可能です。<br/>
+      ・入力された名前が予約一覧にそのまま表示されます。
+    </div>
+
+    <button id="confirmBtn" class="btn">予約を確定する</button>
+
+    <div id="error" class="error"></div>
+  </div>
+
+  <script>
+    const apiEndpoint = "【GAS_WEBAPP_URLをここに】";
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token");
+
+    if (!token) {
+      showError("不正なアクセスです。（token missing）");
+      disableConfirm();
+    }
+
+    // ----------------------------
+    // ① 初期ロード：トークンから仮予約内容を取得
+    // ----------------------------
+    async function loadReservation() {
+      const res = await fetch(apiEndpoint + "?action=loadHold&token=" + token);
+      const json = await res.json();
+
+      if (!json.ok) {
+        showError(json.error || "予約情報を取得できません。");
+        disableConfirm();
+        return;
+      }
+
+      // レッスン情報表示
+      document.getElementById("lessonInfo").innerHTML = `
+        <div class="label">レッスン情報</div>
+        <div>${json.lessonName}</div>
+        <div>${json.date} ${json.startTime} - ${json.endTime}</div>
+        <div>場所：${json.location}</div>
+      `;
+
+      // 生徒情報
+      document.getElementById("email").textContent = json.email;
+      document.getElementById("name").value = json.name || "";
+    }
+
+    loadReservation();
+
+    // ----------------------------
+    // ② 予約確定処理
+    // ----------------------------
+    document.getElementById("confirmBtn").onclick = async () => {
+      const name = document.getElementById("name").value.trim();
+      if (!name) {
+        showError("名前を入力してください。");
+        return;
+      }
+
+      disableConfirm();
+
+      const res = await fetch(apiEndpoint, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "confirmReservation",
+          token,
+          name
+        })
+      });
+      const json = await res.json();
+
+      if (!json.ok) {
+        showError(json.error || "予約確定に失敗しました。");
+        return;
+      }
+
+      // 成功 → success.html に遷移
+      location.href = "success.html?token=" + token;
+    };
+
+    function showError(msg) {
+      document.getElementById("error").textContent = msg;
+    }
+    function disableConfirm() {
+      document.getElementById("confirmBtn").disabled = true;
+    }
+  </script>
+</body>
+</html>
